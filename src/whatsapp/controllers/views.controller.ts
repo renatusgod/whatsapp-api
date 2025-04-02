@@ -69,9 +69,12 @@ export class ViewsController {
         ) as Auth;
       }
 
+      const urlApi = process.env.API_BACKEND || "localhost:8084";
+
       return response.status(HttpStatus.OK).render('qrcode', {
         ...param,
         auth,
+        urlApi,
         connectionState: instance?.connectionStatus.state || 'close',
       });
     } catch (error) {

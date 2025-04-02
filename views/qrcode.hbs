@@ -80,7 +80,7 @@
       
       //Conexão websocket
 
-      const url = `ws://${process.env?.API_BACKEND || 'localhost:8084'}/ws/events`;
+      const url = `ws://{{urlApi}}/ws/events`;
       const reconnectInterval = 5000; // 5 segundos
 
       function socket(eventName, callback) {
