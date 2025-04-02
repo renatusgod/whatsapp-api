@@ -68,7 +68,7 @@
       $('#gen-qrcode').click(() => {
          const headers = { authorization: 'Bearer {{auth.token}}' }
          $.ajax({
-            url: `/instance/connect/{{instanceName}}`,
+            url: `http://{{urlApi}}/instance/connect/{{instanceName}}`,
             headers,
             type: 'GET',
             success: (qrcode, status) => {
