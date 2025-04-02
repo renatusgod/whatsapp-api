@@ -73,6 +73,7 @@ import { docsRouter } from './config/scala.config';
 import { ProviderFiles } from './provider/sessions';
 import { Websocket } from './websocket/server';
 import { createServer } from 'http';
+import cors from 'cors';
 
 export function describeRoutes(
   rootPath: string,
@@ -199,6 +200,12 @@ export async function AppModule(context: Map<string, any>) {
   router.use(...describeRoutes('/group', groupRouter, logger));
   router.use(...describeRoutes('/webhook', webhookRouter, logger));
   router.use(...describeRoutes('/s3', s3Router, logger));
+
+  app.use(cors({
+    origin: '*',  // Permite requisições de qualquer origem (use com cuidado em produção)
+    methods: 'GET,POST,PUT,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization'
+  }));
 
   app.use(urlencoded({ extended: true, limit: '100mb' }), json({ limit: '100mb' }));
 
