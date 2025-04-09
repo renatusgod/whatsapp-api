@@ -133,6 +133,7 @@ model Chat {
   updatedAt  DateTime? @updatedAt
   Instance   Instance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   instanceId Int
+  name       String?    @db.VarChar(500)
 }
 
 model Contact {
