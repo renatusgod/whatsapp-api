@@ -653,7 +653,6 @@ export class WAStartupService {
                 data: {
                   content: chat.content,
                   updatedAt: new Date(),
-                  name: chat.username ?? chat.displayName
                 },
               })
               .catch((err) => this.logger.error(err)),
