@@ -590,7 +590,7 @@ export class WAStartupService {
                 remoteJid: chat.id,
                 content: item as any,
                 instanceId: this.instance.id,
-                name: chat.name
+                name: chat.username ?? chat.displayName
               },
             });
             list.push(create);
@@ -602,7 +602,7 @@ export class WAStartupService {
               data: {
                 content: item as any,
                 updatedAt: new Date(),
-                name: chat.name
+                name: chat.username ?? chat.displayName
               },
             });
             list.push(update);
@@ -653,7 +653,7 @@ export class WAStartupService {
                 data: {
                   content: chat.content,
                   updatedAt: new Date(),
-                  name: chat.name
+                  name: chat.username ?? chat.displayName
                 },
               })
               .catch((err) => this.logger.error(err)),
