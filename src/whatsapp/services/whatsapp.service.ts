@@ -2305,6 +2305,20 @@ export class WAStartupService {
     return await this.repository.chat.findMany({ where });
   }
 
+  public async fetchGroups() {
+    const groups = await this.client.groupFetchAllParticipating();
+
+    const groupList = Object.values(groups)
+      .filter(group => !group.isCommunity)
+      .map(group => ({
+        remoteJid: group.id,
+        name: group.subject,
+        // subjectTime: new Date(Number(group.subjectTime) * 1000).toLocaleString(),
+      }));
+    
+    return groupList;
+  }
+
   public async rejectCall(data: RejectCallDto) {
     try {
       await this.client.rejectCall(data.callId, data.callFrom);
