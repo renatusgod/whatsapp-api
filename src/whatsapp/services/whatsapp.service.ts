@@ -772,6 +772,7 @@ export class WAStartupService {
           return {
             remoteJid: chat.id,
             instanceId: this.instance.id,
+            name: chat.name ?? chat.username ?? chat.displayName
           } as PrismType.Chat;
         });
         await this.sendDataWebhook('chatsSet', chatsRaw);
