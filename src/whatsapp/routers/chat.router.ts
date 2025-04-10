@@ -263,7 +263,7 @@ export function ChatRouter(chatController: ChatController, ...guards: RequestHan
 
       res.status(HttpStatus.OK).json(response);
     })
-    .get(routerPath('findGroups'), ...guards, async (req, res) => {
+    .get(routerPath('groups'), ...guards, async (req, res) => {
       const response = await dataValidate<InstanceDto>({
         request: req,
         schema: null,
