@@ -158,6 +158,10 @@ import {
   writeFileSync,
 } from 'fs';
 
+// // Caminho completo para o ffmpeg.exe e ffprobe.exe
+// ffmpeg.setFfmpegPath('C:\\Users\\Renato\\Downloads\\ffmpeg-master-latest-win64-gpl-shared\\bin\\ffmpeg.exe');
+// ffmpeg.setFfprobePath('C:\\Users\\Renato\\Downloads\\ffmpeg-master-latest-win64-gpl-shared\\bin\\ffprobe.exe');
+
 type InstanceQrCode = {
   count: number;
   code?: string;
@@ -1421,60 +1425,76 @@ export class WAStartupService {
   private async convertAudioToWH(
     inputPath: string,
     format: { input?: string; to?: string } = { input: 'mp3', to: 'aac' },
-  ) {
+  ): Promise<Buffer> {
     return new Promise<Buffer>((resolve, reject) => {
       if (!existsSync(inputPath)) {
         reject(new Error(`Input file not found: ${inputPath}`));
         return;
       }
-
+  
       try {
         accessSync(inputPath, constants.R_OK);
       } catch (error) {
         reject(new Error(`No read permissions for file: ${inputPath}`));
         return;
       }
-
+  
       const chunks: Buffer[] = [];
       const audioStream = new PassThrough();
       const normalizedPath = normalize(inputPath);
-
+  
       const inputFormat =
-        format.input === 'mpga' || 'bin'
+        format.input === 'mpga' || format.input === 'bin'
           ? 'mp3'
           : format.input === 'oga'
             ? 'ogg'
             : format.input;
       const audioCodec = format.to === 'ogg' ? 'libvorbis' : 'aac';
       const outputFormat = format.to === 'ogg' ? 'ogg' : 'adts';
-
+  
+      // Configure o stream para coletar os chunks
+      audioStream.on('data', (chunk) => chunks.push(chunk));
+      audioStream.on('end', () => {
+        console.log('Stream ended, resolving with collected chunks');
+        resolve(Buffer.concat(chunks));
+      });
+  
       const command = ffmpeg(normalizedPath)
         .inputFormat(inputFormat)
         .audioCodec(audioCodec)
         .outputFormat(outputFormat);
-
+  
       command
         .on('start', (commandLine) => {
           console.log('FFmpeg started with command:', commandLine);
-          audioStream.on('data', (chunk) => chunks.push(chunk));
         })
         .on('error', (err, stdout, stderr) => {
           console.error('FFmpeg error:', err.message);
           console.error('FFmpeg stderr:', stderr);
-
+  
+          // Tentar converter para WAV primeiro e então para o formato desejado
+          const tempWavPath = normalizedPath.replace(/\.[^/.]+$/, '_temp.wav');
+          
           ffmpeg(normalizedPath)
             .inputFormat(inputFormat)
             .outputFormat('wav')
+            .output(tempWavPath)
             .on('end', () => {
               console.log('Converted to WAV, retrying final conversion...');
-              const intermediatePath = normalizedPath.replace(/\.[^/.]+$/, '.wav');
-              const secondCommand = ffmpeg(intermediatePath)
+              
+              const secondCommand = ffmpeg(tempWavPath)
                 .audioCodec(audioCodec)
                 .outputFormat(outputFormat);
-
+                
               secondCommand
                 .on('error', (err2, stdout2, stderr2) => {
                   console.error('Second FFmpeg error:', err2.message);
+                  // Tente limpar o arquivo temporário
+                  try {
+                    unlinkSync(tempWavPath);
+                  } catch (e) {
+                    console.error('Failed to delete temp WAV file:', e);
+                  }
                   reject(
                     new Error(
                       `Final conversion failed: ${err2.message}\nFFmpeg stderr: ${stderr2}`,
@@ -1483,20 +1503,26 @@ export class WAStartupService {
                 })
                 .on('end', () => {
                   console.log('Final conversion to target format successful');
-                  resolve(Buffer.concat(chunks));
+                  // Tente limpar o arquivo temporário
+                  try {
+                    unlinkSync(tempWavPath);
+                  } catch (e) {
+                    console.error('Failed to delete temp WAV file:', e);
+                  }
                 })
-                .pipe(audioStream, { end: true });
+                .output(audioStream)
+                .run();
             })
-            .on('error', (err1) =>
-              reject(new Error(`WAV conversion failed: ${err1.message}`)),
-            )
-            .pipe(audioStream, { end: true });
+            .on('error', (err1) => {
+              reject(new Error(`WAV conversion failed: ${err1.message}`));
+            })
+            .run();
         })
         .on('end', () => {
-          console.log('FFmpeg processing finished');
-          resolve(Buffer.concat(chunks));
+          console.log('FFmpeg processing finished successfully');
         })
-        .pipe(audioStream, { end: true });
+        .output(audioStream)
+        .run();
     });
   }
 
@@ -1551,7 +1577,7 @@ export class WAStartupService {
         } else {
           media = await this.convertAudioToWH(fileName, {
             input: ext as string,
-            to: 'ogg',
+            to: 'mp3',
           });
         }
       }
