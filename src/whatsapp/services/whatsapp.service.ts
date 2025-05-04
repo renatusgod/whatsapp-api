@@ -707,13 +707,24 @@ export class WAStartupService {
             const create = await this.repository.contact.create({
               data: {
                 remoteJid: contact.id,
-                pushName: contact?.name || contact.id,
+                pushName: contact?.name || contact?.notify,
                 profilePicUrl: (await this.profilePicture(contact.id)).profilePictureUrl,
                 instanceId: this.instance.id,
               },
             });
             list.push(create);
           } else {
+            if (contact?.name || contact?.notify && find.pushName !== (contact?.name || contact?.notify))
+              {
+                await this.repository.contact.update({
+                  where: { 
+                    id: find.id
+                  },
+                  data: {
+                    pushName: contact?.name || contact?.notify,
+                  },
+                });
+              }
             list.push(find);
           }
           this.ws.send(this.instance.name, 'contacts.upsert', list);
@@ -739,13 +750,25 @@ export class WAStartupService {
             const create = await this.repository.contact.create({
               data: {
                 remoteJid: contact.id,
-                pushName: contact?.name || contact.id,
+                pushName: contact?.name || contact?.notify,
                 profilePicUrl: (await this.profilePicture(contact.id)).profilePictureUrl,
                 instanceId: this.instance.id,
               },
             });
             list.push(create);
           } else {
+            if (contact?.name || contact?.notify && find.pushName !== (contact?.name || contact?.notify))
+            {
+              await this.repository.contact.update({
+                where: { 
+                  id: find.id
+                },
+                data: {
+                  pushName: contact?.name || contact?.notify,
+                },
+              });
+            }
+
             list.push(find);
           }
           this.ws.send(this.instance.name, 'contacts.upsert', list);
