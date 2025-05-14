@@ -2439,8 +2439,16 @@ export class WAStartupService {
   // Group
   public async createGroup(create: CreateGroupDto) {
     try {
-      const participants = create.participants.map((p) => this.createJid(p));
-      const { id } = await this.client.groupCreate(create.subject, participants);
+      const jids = create.participants.map((p) => this.createJid(p));
+      const participants = await this.whatsappNumber({ numbers: jids });
+
+      participants?.forEach(wa => {
+        if (!wa.exists && !isJidGroup(wa.jid)) {
+          throw new BadRequestException(wa);
+        }
+      });
+
+      const { id } = await this.client.groupCreate(create.subject, participants.map((p) => p.jid));
       if (create?.description) {
         await this.client.groupUpdateDescription(id, create.description);
       }
