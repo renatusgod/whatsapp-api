@@ -1274,6 +1274,20 @@ export class WAStartupService {
       if (!quoted) {
         throw new BadRequestException('Quoted message not found');
       }
+    } else if (options?.quotedKeyId) {
+      if (!this.databaseOptions?.DB_OPTIONS?.NEW_MESSAGE) {
+        throw new BadRequestException(
+          'The DATABASE_SAVE_DATA_NEW_MESSAGE environment variable is disabled',
+        );
+      }
+
+      quoted = await this.repository.message.findFirst({
+        where: { keyId: options.quotedKeyId },
+      });
+
+      if (!quoted) {
+        throw new BadRequestException('Quoted message not found');
+      }
     }
 
     const jid = this.createJid(number);
