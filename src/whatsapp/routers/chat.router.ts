@@ -208,7 +208,7 @@ export function ChatRouter(chatController: ChatController, ...guards: RequestHan
           .setHeader('Content-type', response.mimetype)
           .setHeader(
             'Content-Disposition',
-            'inline; filename="' + response.fileName + '"',
+            `inline; filename*=UTF-8''${encodeURIComponent(response.fileName)}`,
           );
 
         const transform: Transform = response.stream;
