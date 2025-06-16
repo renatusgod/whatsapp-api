@@ -104,14 +104,7 @@ import {
   SendReactionDto,
   SendTextDto,
 } from '../dto/sendMessage.dto';
-import {
-  isArray,
-  isBase64,
-  isInt,
-  isNotEmpty,
-  isNumberString,
-  isURL,
-} from 'class-validator';
+import { isArray, isBase64, isInt, isNotEmpty, isURL } from 'class-validator';
 import {
   ArchiveChatDto,
   DeleteMessage,
@@ -656,19 +649,32 @@ export class WAStartupService {
               remoteJid: chat.remoteJid,
             },
           })
-          .then((result) =>
-            this.repository.chat
-              .update({
-                where: {
-                  id: result.id,
-                },
-                data: {
-                  content: chat.content,
-                  updatedAt: new Date(),
-                },
-              })
-              .catch((err) => this.logger.error(err)),
-          )
+          .then((result) => {
+            if (result?.id) {
+              this.repository.chat
+                .update({
+                  where: {
+                    id: result.id,
+                  },
+                  data: {
+                    content: chat.content,
+                    updatedAt: new Date(),
+                  },
+                })
+                .catch((err) => this.logger.error(err));
+            } else {
+              this.repository.chat
+                .create({
+                  data: {
+                    remoteJid: chat.remoteJid,
+                    content: chat.content,
+                    updatedAt: new Date(),
+                    instanceId: this.instance.id,
+                  },
+                })
+                .catch((err) => this.logger.error(err));
+            }
+          })
           .catch((err) => this.logger.error(err));
       });
     },
@@ -771,7 +777,7 @@ export class WAStartupService {
 
             list.push(find);
           }
-          this.ws.send(this.instance.name, 'contacts.upsert', list);
+          this.ws.send(this.instance.name, 'contacts.update', list);
 
           await this.sendDataWebhook('contactsUpsert', list);
         } catch (error) {
@@ -1314,7 +1320,7 @@ export class WAStartupService {
         await this.client.sendPresenceUpdate('paused', recipient);
       }
 
-      const messageSent: PrismType.Message = await (async () => {
+      const messageSent: Partial<PrismType.Message> = await (async () => {
         let q: proto.IWebMessageInfo;
         if (quoted) {
           q = {
@@ -1365,7 +1371,6 @@ export class WAStartupService {
         this.client.ev.emit('messages.upsert', { messages: [m], type: 'notify' });
 
         return {
-          id: undefined,
           keyId: m.key.id,
           keyFromMe: m.key.fromMe,
           keyRemoteJid: m.key.remoteJid,
@@ -1386,7 +1391,7 @@ export class WAStartupService {
       })();
       if (this.databaseOptions.DB_OPTIONS.NEW_MESSAGE) {
         const { id } = await this.repository.message.create({
-          data: messageSent,
+          data: messageSent as PrismType.Message,
         });
         messageSent.id = id;
       }
@@ -1829,7 +1834,7 @@ export class WAStartupService {
     })();
 
     const message: proto.IMessage = {
-      viewOnceMessage: {
+      viewOnceMessageV2: {
         message: {
           messageContextInfo: {
             deviceListMetadata: {},
@@ -1889,7 +1894,7 @@ export class WAStartupService {
     })();
 
     const message: proto.IMessage = {
-      viewOnceMessage: {
+      viewOnceMessageV2: {
         message: {
           messageContextInfo: {
             deviceListMetadata: {},
@@ -1924,10 +1929,6 @@ export class WAStartupService {
                   name: 'single_select',
                   buttonParamsJson: value.toSectionsString(),
                 };
-              }),
-              messageParamsJson: JSON.stringify({
-                from: 'api',
-                templateId: ulid(Date.now()),
               }),
             },
           },
