@@ -54,6 +54,7 @@ import makeWASocket, {
   GroupMetadata,
   isJidGroup,
   isJidUser,
+  isLidUser,
   makeCacheableSignalKeyStore,
   MessageUpsertType,
   ParticipantAction,
@@ -1201,7 +1202,7 @@ export class WAStartupService {
   }
 
   private createJid(number: string): string {
-    if (number.includes('@g.us') || number.includes('@s.whatsapp.net')) {
+    if (number.includes('@g.us') || number.includes('@s.whatsapp.net') || number.includes('@lid')) {
       return number;
     }
 
@@ -1302,7 +1303,7 @@ export class WAStartupService {
       throw new BadRequestException(isWA);
     }
 
-    const recipient = isJidGroup(jid) ? jid : isWA.jid;
+    const recipient = isLidUser(jid) ? jid : (isJidGroup(jid) ? jid : isWA.jid);
 
     if (isJidGroup(recipient)) {
       try {
@@ -2027,6 +2028,8 @@ export class WAStartupService {
         onWhatsapp.push(new OnWhatsAppDto(group.id, !!group?.id, group?.subject));
       } else if (jid.includes('@broadcast')) {
         onWhatsapp.push(new OnWhatsAppDto(jid, true));
+      } else if (isLidUser(jid)) {
+        onWhatsapp.push(new OnWhatsAppDto(null, true, null, number));
       } else {
         try {
           const result = (await this.client.onWhatsApp(jid))[0];
