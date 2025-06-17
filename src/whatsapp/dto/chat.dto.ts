@@ -44,6 +44,7 @@ export class OnWhatsAppDto {
     public readonly jid: string,
     public readonly exists: boolean,
     public readonly name?: string,
+    public readonly lid?: unknown,
   ) {}
 }
 
