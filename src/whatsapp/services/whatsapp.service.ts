@@ -853,6 +853,8 @@ export class WAStartupService {
             messageTimestamp: m.messageTimestamp as number,
             instanceId: this.instance.id,
             device: getDevice(m.key.id),
+            keyRemoteExtra: m.key['senderPn'] ?? m.key['senderLid'],
+            keyParticipantLid: m.key['participantLid']
           } as PrismType.Message);
         }
 
@@ -909,6 +911,8 @@ export class WAStartupService {
             return getDevice(received.key.id);
           })(),
           isGroup: isJidGroup(received.key.remoteJid),
+          keyRemoteExtra: received.key['senderPn'] ?? received.key['senderLid'],
+          keyParticipantLid: received.key['participantLid']
         } as PrismType.Message;
 
         if (this.databaseOptions.DB_OPTIONS.NEW_MESSAGE) {
@@ -1388,6 +1392,8 @@ export class WAStartupService {
           instanceId: this.instance.id,
           device: 'web',
           isGroup: isJidGroup(m.key.remoteJid),
+          keyRemoteExtra: m.key['senderPn'] ?? m.key['senderLid'],
+          keyParticipantLid: m .key['participantLid']
         };
       })();
       if (this.databaseOptions.DB_OPTIONS.NEW_MESSAGE) {
