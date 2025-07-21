@@ -933,6 +933,16 @@ export class WAStartupService {
           }
         }
 
+          // 👇 Aqui busca o nome do grupo (se for grupo)
+        if (isJidGroup(received.key.remoteJid)) {
+          try {
+            const metadata = await this.client.groupMetadata(received.key.remoteJid);
+            messageRaw['groupName'] = metadata?.subject;
+          } catch (err) {
+            this.logger.error(['Erro ao obter metadata do grupo', err?.message]);
+          }
+        }
+        
         messageRaw['info'] = { type };
 
         this.logger.log('Type: ' + type);
