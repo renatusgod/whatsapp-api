@@ -651,7 +651,7 @@ export class WAStartupService {
             },
           })
           .then((result) => {
-            if (result?.id) {
+            if (result && result.id) {
               this.repository.chat
                 .update({
                   where: {
@@ -778,7 +778,7 @@ export class WAStartupService {
 
             list.push(find);
           }
-          this.ws.send(this.instance.name, 'contacts.update', list);
+          this.ws.send(this.instance.name, 'contacts.upsert', list);
 
           await this.sendDataWebhook('contactsUpsert', list);
         } catch (error) {
@@ -844,7 +844,7 @@ export class WAStartupService {
 
           messagesRaw.push({
             keyId: m.key.id,
-            keyRemoteJid: m.key.remoteJid,
+            keyRemoteJid: m.key?.remoteJid || m.key?.['lid'],
             keyFromMe: m.key.fromMe,
             pushName: m?.pushName || m.key.remoteJid.split('@')[0],
             keyParticipant: m?.participant || m.key?.participant,
@@ -877,6 +877,7 @@ export class WAStartupService {
     }) => {
       for (const received of messages) {
         if (!received?.message) {
+          await this.client.waitForMessage(received.key.id);
           continue;
         }
 
@@ -896,7 +897,7 @@ export class WAStartupService {
 
         const messageRaw = {
           keyId: received.key.id,
-          keyRemoteJid: received.key.remoteJid,
+          keyRemoteJid: received.key?.remoteJid || received?.key?.['lid'],
           keyFromMe: received.key.fromMe,
           pushName: received.pushName,
           keyParticipant: received?.participant || received.key?.participant,
@@ -1216,7 +1217,11 @@ export class WAStartupService {
   }
 
   private createJid(number: string): string {
-    if (number.includes('@g.us') || number.includes('@s.whatsapp.net') || number.includes('@lid')) {
+    if (
+      number.includes('@g.us') ||
+      number.includes('@s.whatsapp.net') ||
+      number.includes('@lid')
+    ) {
       return number;
     }
 
@@ -1383,12 +1388,10 @@ export class WAStartupService {
           }
         }
 
-        this.client.ev.emit('messages.upsert', { messages: [m], type: 'notify' });
-
         return {
           keyId: m.key.id,
           keyFromMe: m.key.fromMe,
-          keyRemoteJid: m.key.remoteJid,
+          keyRemoteJid: m.key?.remoteJid || m.key?.['lid'],
           keyParticipant: m?.participant,
           pushName: m?.pushName,
           messageType: getContentType(m.message),
@@ -1416,7 +1419,12 @@ export class WAStartupService {
       messageSent['externalAttributes'] = options?.externalAttributes;
 
       this.ws.send(this.instance.name, 'send.message', messageSent);
+      this.ws.send(this.instance.name, 'messages.upsert', messageSent);
+
       this.sendDataWebhook('sendMessage', messageSent).catch((error) =>
+        this.logger.error(error),
+      );
+      this.sendDataWebhook('messagesUpsert', messageSent).catch((error) =>
         this.logger.error(error),
       );
 
@@ -2039,17 +2047,22 @@ export class WAStartupService {
     const onWhatsapp: OnWhatsAppDto[] = [];
     for await (const number of data.numbers) {
       const jid = this.createJid(number);
+      if (isLidUser(jid)) {
+        onWhatsapp.push(new OnWhatsAppDto(jid, !!true, jid as string));
+      }
       if (isJidGroup(jid)) {
         const group = await this.findGroup({ groupJid: jid }, 'inner');
-        onWhatsapp.push(new OnWhatsAppDto(group.id, !!group?.id, group?.subject));
+        onWhatsapp.push(new OnWhatsAppDto(group.id, !!group?.id, '', group?.subject));
       } else if (jid.includes('@broadcast')) {
         onWhatsapp.push(new OnWhatsAppDto(jid, true));
       } else if (isLidUser(jid)) {
-        onWhatsapp.push(new OnWhatsAppDto(null, true, null, number));
+        onWhatsapp.push(new OnWhatsAppDto(number, true));
       } else {
         try {
           const result = (await this.client.onWhatsApp(jid))[0];
-          onWhatsapp.push(new OnWhatsAppDto(result.jid, !!result.exists, null, result.lid));
+          onWhatsapp.push(
+            new OnWhatsAppDto(result.jid, !!result.exists, result.lid as string),
+          );
         } catch (error) {
           onWhatsapp.push(new OnWhatsAppDto(number, false));
         }
